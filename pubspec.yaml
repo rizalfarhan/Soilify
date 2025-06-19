@@ -1,0 +1,29 @@
+name: klasifikasi_tomat
+description: A new Flutter project.
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  image: ^4.1.3
+  image_picker: ^1.0.7
+  path_provider: ^2.1.2
+  tflite_flutter: ^0.11.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/models/soil_model.tflite
+    - assets/images/contoh.jpg
+    - assets/images/contoh1.jpg
