@@ -1,4 +1,4 @@
-package com.example.klasifikasi_tomat
+package com.example.Soilify
 
 import io.flutter.embedding.android.FlutterActivity
 
