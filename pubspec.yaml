@@ -26,7 +26,6 @@ flutter:
 
   assets:
     - assets/models/soil_model.tflite
-    - assets/images/contoh.jpg
     - assets/images/contoh1.jpg
 
 flutter_launcher_icons:
