@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class ResultCard extends StatelessWidget {
+class ResultCard extends StatefulWidget {
   final String label;
   final double confidence;
   final bool isLoading;
@@ -13,71 +13,130 @@ class ResultCard extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<ResultCard> createState() => _ResultCardState();
+}
+
+class _ResultCardState extends State<ResultCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _barAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+
+    _barAnimation = Tween<double>(
+      begin: 0.0,
+      end: widget.confidence.clamp(0.0, 1.0),
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+    ));
+
+    if (!widget.isLoading && widget.confidence > 0) {
+      _controller.forward();
+    }
+  }
+
+  @override
+  void didUpdateWidget(ResultCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.isLoading && widget.confidence != oldWidget.confidence) {
+      _barAnimation = Tween<double>(
+        begin: 0.0,
+        end: widget.confidence.clamp(0.0, 1.0),
+      ).animate(CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeOutCubic,
+      ));
+      _controller.reset();
+      _controller.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final confidenceColor = _getConfidenceColor(widget.confidence);
 
-    return Card(
-      elevation: isDark ? 4 : 8,
-      shadowColor: isDark ? Colors.black54 : Colors.black26,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
-      color: isDark ? Colors.grey[850] : Colors.white,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header
-            Row(
-              children: [
-                Icon(
-                  Icons.analytics_outlined,
-                  color: isDark ? Colors.green[400] : Colors.green[600],
-                  size: 28,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Hasil Klasifikasi',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 24),
-
-            // Content
-            if (isLoading)
-              _buildLoadingContent(isDark)
-            else
-              _buildResultContent(isDark),
-          ],
-        ),
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildHeader(confidenceColor),
+          const SizedBox(height: 24),
+          widget.isLoading ? _buildLoadingContent() : _buildResultContent(confidenceColor),
+        ],
       ),
     );
   }
 
-  Widget _buildLoadingContent(bool isDark) {
+  Widget _buildHeader(Color iconColor) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: iconColor,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.analytics_rounded,
+            color: Colors.white,
+            size: 24,
+          ),
+        ),
+        const SizedBox(width: 16),
+        const Text(
+          'Hasil Klasifikasi',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2C2C2C),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLoadingContent() {
     return Column(
       children: [
-        CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(
-            isDark ? Colors.green[400]! : Colors.green[600]!,
+        const SizedBox(
+          width: 50,
+          height: 50,
+          child: CircularProgressIndicator(
+            strokeWidth: 4,
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6B4E3D)),
           ),
-          strokeWidth: 3,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
         Text(
-          'Memproses gambar...',
+          'Menganalisis gambar tanah...',
           style: TextStyle(
-            fontSize: 16,
-            color: isDark ? Colors.grey[400] : Colors.grey[600],
+            fontSize: 15,
+            color: Colors.grey[700],
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -85,184 +144,114 @@ class ResultCard extends StatelessWidget {
     );
   }
 
-  Widget _buildResultContent(bool isDark) {
+  Widget _buildResultContent(Color confidenceColor) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Label Container
+        // Label jenis tanah
         Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 24,
-            vertical: 16,
-          ),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           decoration: BoxDecoration(
-            color:
-                isDark ? Colors.green[900]?.withOpacity(0.3) : Colors.green[50],
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(
-              color: isDark ? Colors.green[400]! : Colors.green[200]!,
-              width: 1.5,
-            ),
+            color: confidenceColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16),
           ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.green[400] : Colors.green[800],
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-
-        const SizedBox(height: 20),
-
-        // Confidence Row
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.verified_outlined,
-              color: isDark ? Colors.blue[400] : Colors.blue[600],
-              size: 22,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'Kepercayaan:',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: isDark ? Colors.grey[300] : Colors.grey[700],
+          child: Column(
+            children: [
+              Text(
+                widget.label,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: confidenceColor,
+                ),
+                textAlign: TextAlign.center,
               ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              '${(confidence * 100).toStringAsFixed(1)}%',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.blue[400] : Colors.blue[700],
-              ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 16),
-
-        // Confidence Bar
-        _buildConfidenceBar(isDark),
-      ],
-    );
-  }
-
-  Widget _buildConfidenceBar(bool isDark) {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              '0%',
-              style: TextStyle(
-                fontSize: 12,
-                color: isDark ? Colors.grey[500] : Colors.grey[600],
-              ),
-            ),
-            Text(
-              '100%',
-              style: TextStyle(
-                fontSize: 12,
-                color: isDark ? Colors.grey[500] : Colors.grey[600],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Container(
-          height: 8,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(4),
-            color: isDark ? Colors.grey[700] : Colors.grey[300],
-          ),
-          child: FractionallySizedBox(
-            alignment: Alignment.centerLeft,
-            widthFactor: confidence.clamp(0.0, 1.0),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(4),
-                gradient: LinearGradient(
-                  colors: [
-                    isDark ? Colors.green[400]! : Colors.green[500]!,
-                    isDark ? Colors.blue[400]! : Colors.blue[500]!,
-                  ],
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: confidenceColor.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Kepercayaan ${(widget.confidence * 100).toStringAsFixed(1)}%',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: confidenceColor,
+                  ),
                 ),
               ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 24),
+
+        const Text(
+          'Tingkat Kepercayaan',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF2C2C2C),
+          ),
+        ),
+        const SizedBox(height: 10),
+
+        // Bar confidence dengan animasi
+        Container(
+          height: 14,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(7),
+            color: Colors.grey[200],
+          ),
+          child: AnimatedBuilder(
+            animation: _barAnimation,
+            builder: (context, child) {
+              return FractionallySizedBox(
+                alignment: Alignment.centerLeft,
+                widthFactor: _barAnimation.value,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(7),
+                    gradient: LinearGradient(
+                      colors: [
+                        confidenceColor.withOpacity(0.7),
+                        confidenceColor,
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        Align(
+          alignment: Alignment.centerRight,
+          child: Text(
+            '${(widget.confidence * 100).toStringAsFixed(1)}%',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: confidenceColor,
             ),
           ),
         ),
       ],
     );
   }
-}
 
-// Alternative Compact Version
-class CompactResultCard extends StatelessWidget {
-  final String label;
-  final double confidence;
-
-  const CompactResultCard({
-    Key? key,
-    required this.label,
-    required this.confidence,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Card(
-      elevation: isDark ? 2 : 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      color: isDark ? Colors.grey[850] : Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(
-              Icons.check_circle_outline,
-              color: isDark ? Colors.green[400] : Colors.green[600],
-              size: 24,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${(confidence * 100).toStringAsFixed(1)}% kepercayaan',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: isDark ? Colors.grey[400] : Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  Color _getConfidenceColor(double confidence) {
+    if (confidence >= 0.8) {
+      return const Color(0xFF388E3C); // Hijau tua
+    } else if (confidence >= 0.6) {
+      return const Color(0xFFF57C00); // Oranye
+    } else {
+      return const Color(0xFFD32F2F); // Merah
+    }
   }
 }
